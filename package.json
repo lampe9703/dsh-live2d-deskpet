@@ -1,0 +1,72 @@
+{
+  "name": "dsh-live2d-deskpet",
+  "version": "0.1.5",
+  "description": "Live2D desktop companion plugin for DeepSeek Harness: agent-state driven animations, an independent companion LLM, and local GSV-TTS voice with Japanese audio over Chinese bubbles.",
+  "type": "module",
+  "license": "MIT",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "keywords": [
+    "deepseek-harness",
+    "dsh",
+    "dsh-plugin",
+    "live2d",
+    "desktop-pet",
+    "tts",
+    "gsv-tts",
+    "electron"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "exports": {
+    ".": {
+      "types": "./lib/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./client": {
+      "types": "./lib/client/index.d.ts",
+      "default": "./lib/client/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib",
+    "tts",
+    "README.md",
+    "README.en.md",
+    "LICENSE",
+    "docs",
+    "cordis.patch.yml"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": [],
+      "external": []
+    }
+  },
+  "scripts": {
+    "pack": "npm pack"
+  },
+  "dependencies": {
+    "@deepseek-ai/dsh-typert-protocol": "0.2.0-rc.2",
+    "@deepseek-ai/schemastery": "^3.18.1",
+    "electron": "^44.0.0",
+    "pixi-live2d-display": "^0.4.0",
+    "pixi.js": "^6.5.10",
+    "ws": "^8.18.3"
+  },
+  "optionalDependencies": {
+    "node-window-manager": "^2.2.4"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "^4.0.1",
+    "@deepseek-ai/dsh-settings": "^0.1.2-alpha.3 || ^0.2.0-rc.2",
+    "@deepseek-ai/dsh-typert-protocol": "^0.1.2-alpha.3 || ^0.2.0-rc.2",
+    "@deepseek-ai/dsh-host-directory-picker": "^0.1.2-alpha.3 || ^0.2.0-rc.2"
+  }
+}
