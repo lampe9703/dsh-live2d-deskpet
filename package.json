@@ -1,6 +1,6 @@
 {
   "name": "dsh-live2d-deskpet",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "Live2D desktop companion plugin for DeepSeek Harness: agent-state driven animations, an independent companion LLM, and local GSV-TTS voice with Japanese audio over Chinese bubbles.",
   "type": "module",
   "license": "MIT",
