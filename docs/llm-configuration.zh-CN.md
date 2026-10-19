@@ -31,7 +31,7 @@
 ```json
 {
   "mode": "companion",
-  "companionIntervalMinutes": 10,
+  "companionIntervalSeconds": 600,
   "screenshotsEnabled": true,
   "llm": {
     "baseUrl": "http://127.0.0.1:1234/v1",
@@ -43,12 +43,15 @@
 }
 ```
 
+0.1.7 起截屏间隔为**秒**（最小 10 秒，范围 10–10800，默认 600）；旧版字段
+`companionIntervalMinutes`（分钟）升级后由插件自动一次性换算成秒，无需手工改。
+
 请不要把含 Key 的配置文件提交到 Git。设置栏写入的 Key 以 secret 角色存放在 `~/.dsh/settings.yaml`，读取接口不会回显它的值。
 
 ## 模式含义
 
 - `task`：仅由 DSH Agent 状态驱动动作。
-- `companion`：按间隔截图、去重后调用独立 LLM。
+- `companion`：按间隔（秒级，最小 10 秒）截图、去重后调用独立 LLM。
 - `auto`：Windows 下检测标题匹配 DSH/`127.0.0.1:3080` 且系统级置顶的窗口；检测为置顶时进入Agent驱动模式，否则进入截图驱动模式。非 Windows 或缺少可选原生窗口模块时会保留上次成功检测结果，建议手动选择模式。
 
 设置栏会显示**当前实际生效**的模式：选 `auto` 时，它把此刻解析成的结果一并显示出来。
@@ -56,3 +59,7 @@
 ## 人设对 system message 的影响
 
 陪伴 LLM 的 system message 由**当前激活的人设**的 `systemPrompt` 决定；人设未激活或 `systemPrompt` 为空白时，退回内置提示词（要求简短、自然、不侵扰，且不泄露屏幕上的敏感信息）。参见[设置栏 § 人设的数据结构](settings-panel.zh-CN.md#人设的数据结构)。
+
+0.1.7 起可在设置页开启**陪伴记忆**：最近几轮对话会作为历史注入请求（历史轮只有文本，截图只附在当前轮），system 里同时列出「最近说过的话」防止重复；详见[设置栏 § 陪伴记忆](settings-panel.zh-CN.md#陪伴记忆)。
+
+> AI生成

@@ -24,6 +24,7 @@ Chinese documentation: [README.md](README.md).
 - **Task milestone voice**: in agent-driven mode the pet announces "needs your confirmation", "task finished" and "task started" — Chinese bubble, Japanese voice. Signals come from an in-page observer, because the Electron window cannot see the DSH DOM.
 - **Local voice**: a small Python bridge exposing `POST /tts`; Chinese text on screen, Japanese audio (optionally via a zh→ja translation endpoint).
 - **Personas**: SillyTavern v2 character cards, interoperable with `dsh-cosplay`. A persona only shapes the system message — it never changes the fixed capture prompt.
+- **Adult-content block** (optional, off by default; 0.1.8): flipping the switch injects the plugin's built-in adult anchor into the companion system prompt — no prompt writing required. An optional text box overrides the built-in body (trimmed, max 8000 chars). Injected between the memory block and the speech style; only affects the companion endpoint. Results vary by model/provider — cloud services may filter the request outright; the plugin only delivers the anchor.
 
 ---
 
@@ -72,9 +73,11 @@ Status shown in settings: **ready** / **loading models** (5–20s cold start) / 
 
 ## Privacy
 
-- Captures happen **only** in screenshot-driven mode with "allow screenshots" on, at most once per screenshot interval (default 10 min), primary display only.
+- Captures happen **only** in screenshot-driven mode with "allow screenshots" on, at most once per screenshot interval (**seconds since 0.1.7**, min 10 s, default 600 s = 10 min, range 10–10800), primary display only.
 - Near-duplicate frames are dropped before any request. Accepted PNGs go to **the LLM endpoint you configured**.
 - Each capture also sends a **fixed, hard-coded prompt** (`lib/shared/screen-context.js`) containing the current time, the foreground app name, the window title, and guidance text.
+- **Companion memory** (optional, off by default; 0.1.7): the time, the foreground app and each spoken line are appended to `~/.dsh/live2d-deskpet/memory/turns.jsonl` and replayed as text-only conversation history on the next request, plus a "recently said" list in the system prompt to stop stock-phrase loops. Only a one-line screen summary is stored — never screen contents; suspected passwords, ID numbers and keys are redacted before writing. The clear button empties the file atomically; a missing or corrupted file simply reads as empty.
+- **Adult-content block** (0.1.8): the built-in anchor and any custom override live only in `~/.dsh/settings.yaml` (live2d-deskpet section) on this machine. `nsfw` is never part of a persona and never travels with an exported character card. Logs record only the source (builtin/custom/off) and the injected length — never the text; debug logs mask it like a secret.
 - ⚠️ **Window titles leave the machine** and can contain file names or chat participant names. Raise the interval or disable screenshots if that matters to you.
 - API keys are stored with the `secret` role in `~/.dsh/settings.yaml`, never echoed back, masked in the UI (first 4 + `••••` + last 4), and redacted as `***` in debug logs.
 - The plugin never reads or reuses DSH's own LLM credentials, and never sends companion traffic to DSH's provider.
@@ -112,3 +115,5 @@ cordis.patch.yml     loader patch inserted into the profile
 ## License
 
 MIT — see [LICENSE](LICENSE). Live2D Cubism Core, Live2D models, GSV-TTS and its models, pixi.js and pixi-live2d-display are **not** distributed here; obtain them yourself and follow their terms.
+
+> AI生成
