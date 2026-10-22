@@ -30,6 +30,136 @@
 
 ---
 
+## 情绪动作引擎（0.2.0）
+
+0.1.9 及以前，桌宠的姿态是**状态级**的：`AgentStateResolver` 把生命周期归一化成
+`idle / think / working / celebrate / error`，渲染器按状态查一张 `HEAD_ANGLE` 表写
+`ParamAngleX`。所以「太好了」和「有点担心」在同一状态下得到完全相同的头部角度——
+没有情绪维度、没有强度、没有时序。
+
+0.2.0 把这一层换成 **Soullink Emotion SDK** 驱动的**情绪级**表现：
+
+```
+回复文本 ──→ 情绪判定 ──→ 动作规划 ──→ 参数快照 ──→ 模型
+                ↑                                    ↑
+        TTS 音频（时长 + 真实音量）        注入层（Model.fromMoc 代理）
+```
+
+| 环节 | 实现 |
+| --- | --- |
+| 情绪来源 | 陪伴 LLM 在回复**最开头**吐一个隐藏标记 `[emo:happy:0.8]`，客户端就地剥掉、只留情绪（气泡里看不到）。一次调用两用，不额外发请求。模型不听话时退回本地关键词规则 |
+| 动作规划 | `SoullinkRuntime`（`@soullink-emotion/engine`）按 VAD + FACS 生成 22 个标准参数，含强度与时间轴；同一句 + 固定 seed 可复现 |
+| 口型 | 用 `HTMLMediaElement.play` 钩子抓到真实的 `<audio>`，接 `AnalyserNode` 取 RMS 音量喂给引擎；`ParamMouthOpenY` 跟真实音量走，句尾自然收住 |
+| 写入时机 | 注入层包装 `Live2DCubismCore.Model.fromMoc`，在每次 `update()` **之前**写 `parameters.values`——晚于 pld 的 motion/lipSync、早于 `coreModel.update()`，等价于 bundle 内的 `beforeModelUpdate` |
+| 降级 | 无 profile / 无 TTS / 开关关闭 → 一个参数都不写，行为退回 0.1.9 的姿态查表 |
+
+**为什么是「注入层」而不是改 bundle**：`lib/electron/renderer.js` 是 1.38 MB 的
+IIFE，模型实例与钩子全在闭包里。但 pld 造模型必须经过全局的
+`Live2DCubismCore.Model.fromMoc`——`lib/electron/soullink/inject.js`（由
+`soullink-src/inject.js` 打包而来）就在 `core.js` 与 `renderer.js` 之间加载，
+把那个入口包一层 Proxy。`renderer.js` 一个字节都没动。
+
+**版本红线**：`@soullink-emotion/engine` 锁 `0.1.0-beta.1`（精确版本，beta 不保证
+兼容）。不引入 `@soullink-emotion/live2d-pixi`——它要 pixi 7 + pld 0.5，与现有
+pixi 6 栈不能共存。
+
+**回滚**：设置页「模式」卡片里的「情绪动作引擎」开关关掉即可，等价 0.1.9；
+彻底回滚则重装 `dsh-live2d-deskpet-0.1.9.tgz`。
+
+---
+
+## Agent 模式发言（0.2.1）
+
+0.2.0 的 Agent 驱动模式只会播三句写死的文案，全程没有 LLM 参与，所以**没有情绪**。
+0.2.1 把这条链路接进情绪引擎，同时保持两条链路彼此独立：
+
+```
+观察器(start/confirm/done + detail)        agent/status → AgentStateResolver
+            │                                        │
+            ▼                                        ▼
+   宿主 handleTaskEvent ──判重/冷却──► AgentSpeechService.speakForNode()
+            │                                        │
+            │                       ┌────────────────┴───────────────┐
+            │                       ▼                                ▼
+            │             陪伴 LLM 流式回复 + [emo:x:0.8]      失败/未配置/6s 超时
+            │                       │                                │
+            │                       ▼                                ▼
+            └───────────────────► say(text, emotion) ◄──── pickTaskLine + 固定情绪
+                                         │
+                                         ▼
+                          气泡 + TTS + 情绪动作（与截图驱动同一套下游）
+```
+
+- **说话时**：人设、说话方式、NSFW 锚定块与截图驱动完全同一套 system；只是把
+  「看屏幕」换成「看任务阶段」，并要求 20 字/句、40 字封顶、不许复述细节。
+- **不说话时**：`agent-state` 不再是空分支——`idle/think/working/celebrate/error`
+  各有一个低强度基调（平静 / 疑惑 / 平静 / 开心 / 担心），只 `triggerIntent`，
+  不 `startSpeechMotion`（没说话就别动嘴）。说话期间节点情绪优先，说完回落到基调。
+- **不合并链路**：截图驱动仍然只看屏幕；Agent 模式仍然不截屏。`auto` 的探测逻辑没动。
+- **没有新增常驻定时器**：一次节点一次请求，6 秒硬超时，插件禁用后 CPU 立刻回落。
+
+## 对系统截图可见（0.2.1）
+
+截图驱动截的是整个屏幕，而桌宠是置顶透明窗口——于是每一张截图里都有她自己，
+模型会把画面里的角色当成"别人"来说。0.2.1 用 `win.setContentProtection(true)`
+（Windows 上是 `WDA_EXCLUDEFROMCAPTURE`）让窗口对采集 API 完全不可见：截到的是
+她**背后**的画面，不是黑块，零闪烁、零性能开销。
+
+- 配置项 `visibleToCapture`，**默认 `false`＝不可见**，装好即生效。
+- 语义是正向的（"对系统截图可见"），主进程里取反后再传给 API。
+- 副作用：系统级标志，不分采集方——**用户自己 Win+Shift+S / 录屏也拍不到她**，
+  需要录屏展示时把开关打开。需要 Windows 10 2004+（build 19041+）。
+
+## 自动判断改为按「agent 在不在跑」（0.2.2）
+
+0.2.1 及以前，`自动判断` 看的是 **DSH 窗口是否置顶**。它答的是"你在不在 DSH 里"，
+而你要的是"agent 在不在跑"——起个长任务、切去浏览器等结果是最常见的用法，那时
+窗口早就不置顶了，于是她开始对着浏览器说话，而 agent 还在后台跑。
+
+0.2.2 换掉这个判据，**没有新增任何设置项**：
+
+```
+agent 状态是 working / think
+  或 距最后一次活跃 < 90 秒（尾巴，吃掉工具间隙）  →  Agent驱动：不截屏、不抢显卡
+否则 → 再看窗口是否置顶：置顶=Agent驱动，不置顶=截图驱动
+```
+
+显式选「Agent驱动」/「截图驱动」不参与自动判断，选什么就是什么。
+
+同时把"检查频率"从"截图间隔"里拆出来：内部每 **30 秒**看一眼要不要截图，没到
+间隔就退出，到了一次就截。这样"上一轮被跳过"不会再白等一整个间隔（默认 10 分钟），
+agent 一闲下来最多 30 秒就能补上。间隔本身从**上一次真的截屏**算起。
+
+行为变化：agent 忙的时候她完全安静（除任务节点那几句），哪怕你切去看网页也不会
+评论；任务结束后 90 秒内仍然算 Agent驱动。想强制她看屏幕，显式切「截图驱动」。
+
+## 自动判断的判据修正（0.2.3）
+
+0.2.2 的 `auto` 是「agent 活跃 → Agent驱动，否则看 DSH 窗口是否置顶」。第二半截
+有两个问题：
+
+1. **判据错位**：`isAlwaysOnTop()` 问的是"窗口被钉在顶层"（`WS_EX_TOPMOST`），
+   普通的前台窗口永远不满足。所以"我把 DSH 放前面了"并不等于"判成 Agent驱动"。
+2. **依赖失效**：`node-window-manager` 是 optionalDependency，它的原生 addon
+   （`build/Release/addon.node`）在部分机器上根本没编译，`require` 直接抛错、被
+   `catch` 吞掉，探测永远返回 `false`。这台机器就是这种情况——于是 agent 一闲下来
+   就判成截图驱动，人坐在 DSH 里看代码却被搭话。
+
+0.2.3 把主判据换成**页面自己上报的焦点**，零依赖：
+
+```
+1. agent 活跃（working/think 或 90s 尾巴内）        → Agent驱动
+2. 页面有焦点（document.hasFocus()）               → Agent驱动
+3. 页面明确失去焦点                                → 截图驱动
+4. 从没收到过页面上报（页面没开 / 老客户端）        → 窗口探测兜底（前台或置顶）
+```
+
+页面侧用 `focus` / `blur` / `visibilitychange` 三个事件上报，外加 30 秒心跳（宿主
+重启后不必等下一次切换）。通道复用 `127.0.0.1:9879` 的 `/page-focus`，而且**不再
+随任务节点语音开关关闭**——关掉语音只是不播报，信号照常在。
+
+---
+
 ## 依赖前提
 
 | 依赖                       | 说明                                            |

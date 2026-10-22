@@ -41,6 +41,10 @@ export declare class DesktopPetHost {
     start(): Promise<void>;
     stop(): Promise<void>;
     setAgentState(state: AgentState): void;
+    /** 页面自报焦点（0.2.3）：true / false，只在变化时下发给 Electron。 */
+    setPageFocused(focused: boolean): void;
+    /** 记下用户这一回合的请求（0.2.8），节点播报时作为任务上下文。 */
+    noteUserPrompt(text: string): void;
     /**
      * Apply a committed settings section. Mode, selected model, window size, and
      * companion LLM fields reach the Electron window without a restart; a size

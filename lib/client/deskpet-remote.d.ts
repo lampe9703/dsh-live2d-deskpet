@@ -21,6 +21,8 @@ export interface DeskpetRemoteState {
         modelId: string;
         companionIntervalMinutes: number;
         screenshotsEnabled: boolean;
+        /** 0.2.1：对系统截图可见（默认 false＝不可见）。 */
+        visibleToCapture: boolean;
         cubismCorePath: string;
         windowWidth: number;
         windowHeight: number;

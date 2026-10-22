@@ -38,6 +38,16 @@ export interface PetConfig {
     modelId?: string;
     companionIntervalMinutes: number;
     screenshotsEnabled: boolean;
+    /**
+     * Whether the pet is visible to system screen capture (0.2.1).
+     *
+     * Defaults to `false`: the window is created with
+     * `setContentProtection(true)` (`WDA_EXCLUDEFROMCAPTURE` on Windows), so the
+     * pet never appears in a screenshot — including the one the companion takes
+     * to read the screen, which used to make her talk about "the girl on screen"
+     * as if it were someone else. Users turn it on when they want to record her.
+     */
+    visibleToCapture: boolean;
     cubismCorePath: string;
     windowWidth: number;
     windowHeight: number;

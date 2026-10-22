@@ -1,6 +1,6 @@
 {
   "name": "dsh-live2d-deskpet",
-  "version": "0.1.9",
+  "version": "0.2.8",
   "description": "Live2D desktop companion plugin for DeepSeek Harness: agent-state driven animations, an independent companion LLM, and local GSV-TTS voice with Japanese audio over Chinese bubbles.",
   "type": "module",
   "license": "MIT",
@@ -49,12 +49,12 @@
       "external": []
     }
   },
-  "scripts": {
-    "pack": "npm pack"
-  },
   "dependencies": {
     "@deepseek-ai/dsh-typert-protocol": "0.2.0-rc.2",
     "@deepseek-ai/schemastery": "^3.18.1",
+    "@soullink-emotion/engine": "0.1.0-beta.1",
+    "@soullink-emotion/planner-openai": "0.1.0-beta.1",
+    "@soullink-emotion/profile-generator": "0.1.0-beta.1",
     "electron": "^44.0.0",
     "pixi-live2d-display": "^0.4.0",
     "pixi.js": "^6.5.10",
@@ -68,5 +68,8 @@
     "@deepseek-ai/dsh-settings": "^0.1.2-alpha.3 || ^0.2.0-rc.2",
     "@deepseek-ai/dsh-typert-protocol": "^0.1.2-alpha.3 || ^0.2.0-rc.2",
     "@deepseek-ai/dsh-host-directory-picker": "^0.1.2-alpha.3 || ^0.2.0-rc.2"
+  },
+  "scripts": {
+    "pack": "npm pack"
   }
 }
